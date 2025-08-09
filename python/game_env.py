@@ -63,6 +63,7 @@ class StoneGameEnv(gym.Env):
 
         # Initialize the state. This will be set properly in `reset()`.
         self.stones_remaining = self.initial_stones
+        self.turn = 0 # 0 for agent, 1 for opponent
 
     def reset(self, seed=None, options=None):
         """
@@ -80,6 +81,13 @@ class StoneGameEnv(gym.Env):
 
         # Reset the number of stones to the initial count.
         self.stones_remaining = self.initial_stones
+        
+        # Randomly decide who starts
+        self.turn = np.random.randint(0, 2)
+
+        # If opponent starts, let them make a move.
+        if self.turn == 1:
+            self.opponent_move()
 
         # The initial observation is the starting number of stones.
         observation = self.stones_remaining
@@ -90,48 +98,53 @@ class StoneGameEnv(gym.Env):
 
     def step(self, action):
         """
-        Executes one time step in the environment.
-
-        This is the core of the environment. It takes an agent's action,
-        updates the game state, simulates the opponent's move, and calculates the reward.
-
-        Args:
-            action (int): The action chosen by the agent (0, 1, or 2).
-
-        Returns:
-            A tuple containing:
-            - observation (int): The number of stones remaining after the opponent's turn.
-            - reward (float): The reward for the agent's move.
-            - terminated (bool): True if the game is over, False otherwise.
-            - truncated (bool): Always False, as our game has a clear end.
-            - info (dict): An empty dictionary.
+        Executes one time step in the environment for the agent.
         """
         # The action from the agent is 0, 1, or 2. We map this to taking 1, 2, or 3 stones.
         stones_to_take = action + 1
 
         # --- Agent's Move ---
-        # It's good practice to check if the move is valid.
+        if self.turn != 0:
+            # This should not happen if the game logic is correct.
+            # It's the opponent's turn, but step() was called.
+            # We can return the current state without changes or handle as an error.
+            return self.stones_remaining, 0, False, False, {"error": "Not agent's turn"}
+
         if stones_to_take > self.stones_remaining:
-            # This is an illegal move. In a real game, this might happen if the AI
-            # hasn't learned the rules yet. We'll penalize it heavily and end the game.
             self.stones_remaining = 0
-            reward = -10.0 # Heavy penalty to discourage this
+            reward = -10.0 # Heavy penalty
             terminated = True
             observation = self.stones_remaining
             return observation, reward, terminated, False, {}
 
-        # Apply the agent's action.
         self.stones_remaining -= stones_to_take
 
-        # Check if the agent won with this move.
         if self.stones_remaining == 0:
-            reward = 1.0  # Agent took the last stone(s) and won.
+            reward = 1.0  # Agent won
             terminated = True
             observation = self.stones_remaining
             return observation, reward, terminated, False, {}
 
+        # It's now the opponent's turn
+        self.turn = 1
+        
+        # Opponent makes their move
+        self.opponent_move()
+        
+        observation = self.stones_remaining
+        
+        if self.stones_remaining == 0:
+            reward = -1.0 # Opponent won
+            terminated = True
+        else:
+            reward = 0.0
+            terminated = False
+            self.turn = 0 # Back to agent's turn
+
+        return observation, reward, terminated, False, {}
+        
+    def opponent_move(self):
         # --- Opponent's Move ---
-        # Now it's the opponent's turn. We'll implement an optimal strategy.
         # The optimal strategy is to always leave a number of stones that is a
         # multiple of 4 for the agent.
         opponent_stones_to_take = self.stones_remaining % 4
@@ -140,30 +153,10 @@ class StoneGameEnv(gym.Env):
         # opponent cannot force a win on this move, so it makes a random move.
         if opponent_stones_to_take == 0:
             opponent_stones_to_take = np.random.randint(1, 4)
-            move_type = "random"
-        else:
-            move_type = "optimal"
 
         # Ensure the opponent's move is valid.
         opponent_stones_to_take = min(opponent_stones_to_take, self.stones_remaining)
         self.stones_remaining -= opponent_stones_to_take
-        
-        # Store opponent's move details for debugging.
-        info = {
-            "opponent_move": opponent_stones_to_take,
-            "move_type": move_type
-        }
-
-        # Check if the opponent won.
-        if self.stones_remaining == 0:
-            reward = -1.0  # Opponent took the last stone(s), agent lost.
-            terminated = True
-        else:
-            reward = 0.0  # Game continues, no reward or penalty yet.
-            terminated = False
-
-        observation = self.stones_remaining
-        return observation, reward, terminated, False, info
 
     def render(self):
         """
