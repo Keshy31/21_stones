@@ -26,9 +26,9 @@ def parse_args():
     # Algorithm-specific arguments for Q-learning and the environment
     parser.add_argument("--env-id", type=str, default="StoneGame",
         help="the id of the environment")
-    parser.add_argument("--total-episodes", type=int, default=10000,
+    parser.add_argument("--total-episodes", type=int, default=20000,
         help="total number of episodes (full games) to run for training")
-    parser.add_argument("--learning-rate", type=float, default=0.5,
+    parser.add_argument("--learning-rate", type=float, default=0.6,
         help="the learning rate (alpha) for updating Q-values; controls how much new information overrides old")
     parser.add_argument("--gamma", type=float, default=0.9,
         help="the discount factor gamma; determines the importance of future rewards")
@@ -36,7 +36,7 @@ def parse_args():
         help="the starting epsilon value for exploration (starts with fully random actions)")
     parser.add_argument("--end-epsilon", type=float, default=0.05,
         help="the ending epsilon value for exploration (reduces to mostly exploiting learned policy)")
-    parser.add_argument("--exploration-fraction", type=float, default=0.8,
+    parser.add_argument("--exploration-fraction", type=float, default=0.5,
         help="the fraction of total episodes over which epsilon decays from start to end")
     args = parser.parse_args()
     return args
