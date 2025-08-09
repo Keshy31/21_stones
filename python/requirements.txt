@@ -2,6 +2,8 @@ gymnasium
 pufferlib
 cleanrl
 pyserial
-pygame==2.6.0
+pygame
 matplotlib
+numpy
+
 
