@@ -1,4 +1,3 @@
-```python
 import argparse
 import os
 import random
@@ -152,4 +151,3 @@ if __name__ == "__main__":
     # Clean up resources
     env.close()
     writer.close()
-```
