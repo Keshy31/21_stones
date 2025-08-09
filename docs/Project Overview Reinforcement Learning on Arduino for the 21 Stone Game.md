@@ -1,20 +1,20 @@
 # Project Overview: Reinforcement Learning on Arduino for the 21 Stone Game
 
 ## Abstract
-This project demonstrates a simple reinforcement learning (RL) application on an Arduino microcontroller, using a physical "21 stone game" (an enhanced subtraction variant of Nim) to showcase how machines can "learn" from experience. The game starts with 21 "stones" represented by LEDs, where players alternate taking 1, 2, or 3 stones via buttons, and the one who takes the last stone wins. The AI agent, powered by a Q-learning algorithm, begins with random moves but improves over simulated games to counter human strategies. Training occurs in a Python simulation accelerated by PufferLib for efficiency, with the learned policy deployed to the Arduino for real-time play. A live USB serial connection between the Arduino and laptop enables seamless loading of the Q-table (weights) and real-time logging of gameplay, wins/losses, and moves—ideal for demo videos and educational logging. This setup keeps things accessible for laypeople: They see the AI adapt and win against predictable play after a few simulated rounds, with PC logs and visuals illustrating the process. A Python-based game engine using Pygame provides a software-only playable version for on-screen play, testing, and hybrid demos, enhancing visual appeal for videos and social media. The Arduino code is implemented in Rust for safer memory handling, modern features, and enhanced reliability on resource-constrained hardware, leveraging the officially maintained AVR support in the embedded Rust ecosystem as of 2025. The project is phased with a complete software/simulation solution first (including the game engine), followed by hardware for demonstration, with future extensions for live training.
+This project demonstrates a simple reinforcement learning (RL) application on an Arduino microcontroller, using a physical "21 stone game" (an enhanced subtraction variant of Nim) to showcase how machines can "learn" from experience. The game starts with 21 "stones" represented by LEDs, where players alternate taking 1, 2, or 3 stones via buttons, and the one who takes the last stone wins. The AI agent, powered by a Q-learning algorithm, begins with random moves but improves over thousands of simulated games to counter human strategies. Training occurs in a simple and easy-to-understand Python simulation, with the learned policy deployed to the Arduino for real-time play. A live USB serial connection between the Arduino and laptop enables seamless loading of the Q-table (weights) and real-time logging of gameplay, wins/losses, and moves—ideal for demo videos and educational logging. This setup keeps things accessible for laypeople: They see the AI adapt and win against predictable play after a few simulated rounds, with PC logs and visuals illustrating the process. A Python-based game engine using Pygame provides a software-only playable version for on-screen play, testing, and hybrid demos, enhancing visual appeal for videos and social media. The Arduino code is implemented in Rust for safer memory handling, modern features, and enhanced reliability on resource-constrained hardware, leveraging the officially maintained AVR support in the embedded Rust ecosystem as of 2025. The project is phased with a complete software/simulation solution first (including the game engine), followed by hardware for demonstration, with future extensions for live training.
 
 ## Introduction
-The 21 Stone Game RL Project bridges software simulation and hardware execution to make reinforcement learning accessible. Inspired by classic RL tutorials (e.g., enhanced Nim variants), it recreates a turn-based game on Arduino hardware while adding a novel twist: Using PufferLib (latest version 3.0 as of 2025, with core algorithmic improvements) for parallel simulation training against varied opponent strategies, resulting in a more robust AI after a few games. A live serial connection enhances demos by allowing seamless Q-table loading and real-time gameplay logging on the laptop.
+The 21 Stone Game RL Project bridges software simulation and hardware execution to make reinforcement learning accessible. Inspired by classic RL tutorials (e.g., enhanced Nim variants), it recreates a turn-based game on Arduino hardware. A key educational feature is the live serial connection, which enhances demos by allowing seamless Q-table loading and real-time gameplay logging on the laptop.
 
 The core goal is educational: Demonstrate to non-experts how an AI "learns" by playing virtual games on a computer, then applies that knowledge on a physical device to beat humans at a simple yet strategic game. For example, if a human always takes 2 stones, the AI learns to exploit this after a few simulated rounds, turning losses into wins. Live logging and the Pygame engine show moves, scores, and outcomes in real-time on the PC, making it perfect for demo videos (e.g., screen recordings of animated gameplay + log window) and social media posts (e.g., GIFs of AI adaptations).
 
 Key features:
 - **Hardware Simplicity:** 21 LEDs, 3 buttons, Arduino Uno—easy to build with ~$25 in parts.
-- **Software Efficiency:** Python sim with PufferLib for quick training (minutes on a laptop).
-- **Game Engine:** Python with Pygame (version 2.6.0 as of 2025) for a visual, playable software version—standalone or hybrid with hardware.
+- **Software Simplicity:** A straightforward Python simulation trains the agent in minutes on a laptop.
+- **Game Engine:** Python with Pygame (version 2.6.0 as of 2025) provides a visual, playable software version with an "AI Insight" panel to show the AI's decision-making process in real-time.
 - **Live Connection:** USB serial for loading Q-table and logging gameplay/wins/losses.
 - **Language Flexibility:** Arduino code in Rust, utilizing crates like `arduino-hal` for safe and efficient embedded programming. This choice aligns with Rust's growing adoption in embedded systems for 2025, including official AVR maintenance.
-- **Novelty for Community:** Combines tabular Q-learning with vectorized training, live serial integration, and a Pygame engine; shareable as a GitHub repo with code, diagrams, and a beginner's guide.
+- **Novelty for Community:** Combines tabular Q-learning, live serial integration, and an educational Pygame engine; shareable as a GitHub repo with code, diagrams, and a beginner's guide.
 - **Scalability:** Extendable to more complex games (e.g., Rock-Paper-Scissors variant) or robotics later.
 
 This document serves as a white paper outline, suitable for inclusion in a Git repository alongside the README.md.
@@ -29,7 +29,6 @@ To keep explanations accessible, here's a simple breakdown of key terms (avoidin
 - **Reward:** Feedback: +1 for winning, -1 for losing, 0 otherwise.
 - **Policy:** The AI's strategy, derived from the Q-table (e.g., "In state 3, always take 3").
 - **Epsilon-Greedy:** A way to balance trying new things (random actions with probability epsilon) and using what works (best Q-score).
-- **PufferLib:** A Python library that speeds up training by running many simulated games at once (parallel), like practicing 32 matches simultaneously. Updated to version 3.0 in 2025 with improvements for efficiency.
 - **Gymnasium (Gym):** A Python toolkit for creating simulated environments, like a virtual playground for the game.
 - **Episode:** One full game, from 21 stones to 0.
 - **Convergence:** When the Q-table stabilizes, meaning the AI has "learned" and stops changing much.
@@ -47,11 +46,10 @@ The project consists of two interconnected systems: a Python-based simulation an
    - **Purpose:** Train the AI in a virtual environment to build the Q-table, and provide a playable software version for demos.
    - **Key Parts:**
      - Gymnasium Env: Simulates the 21 stone game, including opponent moves (varied strategies like 25-75% optimal).
-     - PufferLib: Wraps the env for parallel training (e.g., 32 games at once), using CleanRL (updated implementations as of 2025) for Q-learning updates.
-     - Trainer: Runs episodes, updates Q-table based on rewards, and exports the final table.
-     - Pygame Engine: Renders the game visually (e.g., row of stone icons, clickable/touchable buttons for actions, real-time logs and Q-value displays). Supports modes: Human vs AI, AI vs AI, or hybrid with hardware.
+     - Trainer: Runs thousands of episodes in a simple loop, updating the Q-table based on rewards, and exporting the final table. This process is intentionally straightforward to be educational.
+     - Pygame Engine: Renders the game visually (e.g., row of stone icons, clickable buttons for actions). It includes an "AI Insight" panel showing the Q-values for the current state and a persistent scoreboard tracking wins/losses. Supports Human vs. AI mode.
      - Serial Loader/Logger: A Python script that sends the Q-table to Arduino over serial, receives live game data (moves, states, wins/losses), and integrates with the Pygame engine for display/logging.
-   - **Output:** A 22x3 Q-table (states 0-21, actions take1/take2/take3) as printed numbers, plus live visuals/logs during play.
+   - **Output:** A 22x3 Q-table (states 0-21, actions take1/take2/take3) as both `.npy` and `.txt` files, plus live visuals/logs during play.
 
 2. **Hardware System (Arduino):**
    - **Purpose:** Run the trained AI in physical play against a human, with live data exchange and optional sync to Pygame engine.
@@ -92,16 +90,21 @@ This live connection and Pygame engine make demos engaging: Play on-screen or ha
 - **Cost:** ~$10-15 (assuming Arduino owned).
 - **Power:** USB from PC for demo (enables live connection).
 
-## Software Simulation with PufferLib and Pygame Engine
-- **Environment:** Python 3.x; install `gymnasium`, `pufferlib`, `cleanrl`, `pyserial`, `pygame` (version 2.6.0) via pip.
-- **Custom Env:** StoneGameEnv: Simulates game, opponent as probabilistic "perfect" player.
-- **Training:** Use PufferLib to vectorize (parallel envs), CleanRL for Q-learning. Parameters: alpha=0.5 (learning rate), gamma=0.9 (future discount), epsilon=0.3 decaying to 0.05.
-- **Pygame Integration:** Extend sim into `game_engine.py`: Render stones as graphical elements (e.g., circles or images), add interactive buttons, display state/logs/Q-table heatmap (using Matplotlib embedded). Modes include standalone play, training visualization, and serial sync.
-- **Serial Integration:** Post-training, the engine loads Q-table via serial and starts listening for logs, updating visuals in real-time.
-- **Process:** Run 1000-2000 episodes; AI plays against sim opponents. Q-table converges (e.g., high scores for winning moves like take 3 from 3).
-- **Output:** Printed Q-table for verification; live visuals/logs during play (e.g., GUI: "Game 1: Human win, Score: AI 3/10").
-- **Time:** Minutes on laptop, thanks to parallel sims.
-- **Code:** Extend previous snippets; use Pygame for 2D rendering to create appealing demos.
+## Software Simulation and Game Engine
+- **Environment:** Python 3.x; install `gymnasium`, `numpy`, `pygame` via pip.
+- **Custom Env:** `StoneGameEnv` simulates the game logic and provides the necessary interface for a Q-learning agent.
+- **Training:** The `train.py` script implements a simple tabular Q-learning algorithm. It runs for thousands of episodes, using an epsilon-greedy strategy to balance exploration and exploitation. The Q-table is updated after each move based on the Bellman equation. This straightforward approach is highly effective for this game and serves as a clear educational example.
+- **Pygame Integration:** The `game_engine.py` script provides a rich user interface for playing against the trained AI. It loads the generated Q-table and uses it to drive the AI's moves. Key features include:
+    - A visual representation of the stones.
+    - Interactive buttons for the human player.
+    - An "AI Insight" panel that displays the Q-values for the current state, showing the player exactly how the AI is making its decision.
+    - A persistent scoreboard that tracks wins and losses across games.
+    - A turn indicator and information about the last move made.
+- **Serial Integration:** Post-training, the engine will be extended to load the Q-table via serial and listen for logs, updating visuals in real-time.
+- **Process:** Run the training script to generate the Q-table. Then, run the game engine to play against the trained agent. The AI will use the Q-table to select the optimal move at each step.
+- **Output:** A saved Q-table, and a fully interactive graphical game.
+- **Time:** Training takes only a few minutes on a standard laptop.
+- **Code:** See `python/train.py` and `python/game_engine.py`.
 
 ## Arduino Implementation
 - **Code Base:** Rust, using embedded crates for safer code and modern features. Leverage the official AVR support in Rust as of 2025 for reliable compilation and execution on the ATmega328P (Arduino Uno's microcontroller). Key crates include `arduino-hal` for hardware abstractions (e.g., pins, serial), `avr-device` for peripherals, and `ufmt` for lightweight formatting in no_std environments.
