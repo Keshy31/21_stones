@@ -38,6 +38,7 @@ class GameEngine:
         # Game state management
         self.running = True
         self.game_state = "menu"  # "menu", "playing", "game_over"
+        self.turn = "human" # human or ai
         self.winner = None
 
         # Button setup
@@ -65,22 +66,21 @@ class GameEngine:
 
     def run_menu(self):
         self.env.reset()
+        self.turn = "human"
         self.winner = None
         self.game_state = "playing"
 
     def run_game(self):
-        human_turn = self.env.turn == 0 # Assuming 0 is human, 1 is AI from env
-        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-            if event.type == pygame.MOUSEBUTTONDOWN and human_turn:
+            if event.type == pygame.MOUSEBUTTONDOWN and self.turn == "human":
                 for action, button in self.buttons.items():
                     if button["rect"].collidepoint(event.pos):
                         self.handle_human_move(action)
                         break
 
-        if not human_turn and self.game_state == "playing":
+        if self.turn == "ai" and self.game_state == "playing":
             pygame.time.wait(500)
             self.handle_ai_move()
 
@@ -93,26 +93,44 @@ class GameEngine:
 
     def handle_human_move(self, stones_to_take):
         if stones_to_take <= self.env.stones_remaining:
-            _, _, terminated, _, _ = self.env.step(stones_to_take -1) # action is 0,1,2
-            if terminated:
-                self.winner = "Human" if self.env.stones_remaining == 0 else "AI"
+            self.env.stones_remaining -= stones_to_take
+            if self.env.stones_remaining == 0:
+                self.winner = "Human"
                 self.game_state = "game_over"
+            else:
+                self.turn = "ai"
 
     def handle_ai_move(self):
+        state = self.env.stones_remaining
         if self.q_table is not None:
-            state = self.env.stones_remaining
-            action_idx = np.argmax(self.q_table[state, :])
+            # AI uses its learned Q-table
+            # We must account for the fact the action in the table might be invalid
+            valid_actions = [a for a in range(self.env.action_space.n) if (a + 1) <= state]
+            if not valid_actions: # Should not happen if game logic is correct
+                self.winner = "Human" # AI has no valid moves, human wins
+                self.game_state = "game_over"
+                return
+
+            # From the valid actions, choose the one with the highest Q-value
+            q_values = self.q_table[state, valid_actions]
+            best_action_idx = np.argmax(q_values)
+            action_to_take = valid_actions[best_action_idx]
+            stones_to_take = action_to_take + 1
+            
         else:
             # Fallback to the same optimal logic as the environment's opponent
-            action_idx = (self.env.stones_remaining % 4) -1
-            if action_idx < 0:
-                action_idx = random.randint(0, 2)
+            stones_to_take = self.env.stones_remaining % 4
+            if stones_to_take == 0:
+                stones_to_take = random.randint(1, 3)
         
-        _, _, terminated, _, _ = self.env.step(action_idx)
-        if terminated:
-            self.winner = "AI" if self.env.stones_remaining == 0 else "Human"
-            self.game_state = "game_over"
+        stones_to_take = min(stones_to_take, self.env.stones_remaining)
 
+        self.env.stones_remaining -= stones_to_take
+        if self.env.stones_remaining == 0:
+            self.winner = "AI"
+            self.game_state = "game_over"
+        else:
+            self.turn = "human"
 
     def run_game_over(self):
         for event in pygame.event.get():
@@ -153,10 +171,9 @@ class GameEngine:
 
     def draw_buttons(self):
         mouse_pos = pygame.mouse.get_pos()
-        human_turn = self.env.turn == 0
         for action, button in self.buttons.items():
             rect = button["rect"]
-            color = BUTTON_HOVER_COLOR if rect.collidepoint(mouse_pos) and human_turn else BUTTON_COLOR
+            color = BUTTON_HOVER_COLOR if rect.collidepoint(mouse_pos) and self.turn == "human" else BUTTON_COLOR
             pygame.draw.rect(self.screen, color, rect, border_radius=5)
             
             text_surf = self.font.render(button["text"], True, TEXT_COLOR)
@@ -164,7 +181,7 @@ class GameEngine:
             self.screen.blit(text_surf, text_rect)
 
     def draw_turn_indicator(self):
-        turn_text = f"Turn: {'Human' if self.env.turn == 0 else 'AI'}"
+        turn_text = f"Turn: {self.turn.capitalize()}"
         text_surface = self.font.render(turn_text, True, TEXT_COLOR)
         text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 30))
         self.screen.blit(text_surface, text_rect)
