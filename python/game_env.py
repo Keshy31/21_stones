@@ -131,19 +131,28 @@ class StoneGameEnv(gym.Env):
             return observation, reward, terminated, False, {}
 
         # --- Opponent's Move ---
-        # Now it's the opponent's turn. We'll implement a simple but effective strategy.
-        # The optimal strategy in this game is to always leave a number of stones
-        # that is a multiple of 4 for the other player.
-        # Example: If there are 9 stones, taking 1 leaves 8 (a multiple of 4).
-        opponent_stones_to_take = (self.stones_remaining - 1) % 4
+        # Now it's the opponent's turn. We'll implement an optimal strategy.
+        # The optimal strategy is to always leave a number of stones that is a
+        # multiple of 4 for the agent.
+        opponent_stones_to_take = self.stones_remaining % 4
+        
+        # If the number of remaining stones is already a multiple of 4, the
+        # opponent cannot force a win on this move, so it makes a random move.
         if opponent_stones_to_take == 0:
-            # If the opponent cannot force a win (the number of stones is already a multiple
-            # of 4 plus 1, e.g. 5, 9, 13), it will make a random move.
             opponent_stones_to_take = np.random.randint(1, 4)
+            move_type = "random"
+        else:
+            move_type = "optimal"
 
         # Ensure the opponent's move is valid.
         opponent_stones_to_take = min(opponent_stones_to_take, self.stones_remaining)
         self.stones_remaining -= opponent_stones_to_take
+        
+        # Store opponent's move details for debugging.
+        info = {
+            "opponent_move": opponent_stones_to_take,
+            "move_type": move_type
+        }
 
         # Check if the opponent won.
         if self.stones_remaining == 0:
@@ -154,7 +163,7 @@ class StoneGameEnv(gym.Env):
             terminated = False
 
         observation = self.stones_remaining
-        return observation, reward, terminated, False, {}
+        return observation, reward, terminated, False, info
 
     def render(self):
         """
